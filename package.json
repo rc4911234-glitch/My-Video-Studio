@@ -18,6 +18,10 @@
     "agent:publishing": "node agents/publishing-scheduling-agent.js",
     "agent:analytics": "node agents/analytics-optimization-agent.js",
     "credentials:setup": "node utils/credential-manager.js setup",
+    "bypass": "node utils/auto-viral-bypasser.js",
+    "comedy:autopilot": "node utils/comedy-channel-autopilot.js",
+    "autopilot": "node schedules/comedy-autopilot-scheduler.js",
+    "upload": "node utils/youtube-uploader.js",
     "lint": "eslint ."
   },
   "dependencies": {

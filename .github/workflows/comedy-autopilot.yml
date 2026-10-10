@@ -1,0 +1,60 @@
+name: YouTube Comedy Autopilot 24/7
+
+on:
+  schedule:
+    # 1:30 PM IST = 8:00 AM UTC
+    - cron: '0 8 * * *'
+    # 7:30 PM IST = 2:00 PM UTC
+    - cron: '0 14 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  auto-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install yt-dlp
+        run: |
+          sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+          sudo chmod a+rx /usr/local/bin/yt-dlp
+          yt-dlp --version
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Configure YouTube Credentials & Tokens
+        env:
+          CREDENTIALS_JSON: ${{ secrets.CREDENTIALS_JSON }}
+          TOKENS_JSON: ${{ secrets.TOKENS_JSON }}
+        run: |
+          mkdir -p config
+          echo "$CREDENTIALS_JSON" > config/credentials.json
+          echo "$TOKENS_JSON" > config/tokens.json
+          echo "Credentials & tokens restored successfully."
+
+      - name: Run Comedy Autopilot & Auto-Upload
+        run: npm run comedy:autopilot -- --upload --force
+
+      - name: Commit Updated History
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add data/comedy_history.json || true
+          git commit -m "Update comedy history [skip ci]" || echo "No history changes to commit"
+          git push || echo "Push skipped"
