@@ -34,6 +34,7 @@ logs/
 temp/
 tmp/
 uploads/
+data/downloads/
 *.tmp
 
 # OS Files

@@ -5,7 +5,7 @@ const { AutoViralBypasser } = require('./auto-viral-bypasser');
 
 const HISTORY_FILE = path.join(__dirname, '..', 'data', 'comedy_history.json');
 
-// Top Indian Comedy Creators Pool
+// Top 20 Indian Comedy Creators Pool
 const COMEDY_CREATORS = [
   { name: 'Aaryan Kelvin', query: 'Aaryan Kelvin' },
   { name: 'CarryMinati', query: 'CarryMinati' },
@@ -13,8 +13,20 @@ const COMEDY_CREATORS = [
   { name: 'Harsh Beniwal', query: 'Harsh Beniwal' },
   { name: 'Purav Jha', query: 'Purav Jha' },
   { name: 'BB Ki Vines', query: 'BB Ki Vines' },
+  { name: 'The MriDul', query: 'The MriDul comedy' },
   { name: 'Triggered Insaan', query: 'Triggered Insaan funny' },
-  { name: 'Ashish Chanchlani', query: 'Ashish Chanchlani' }
+  { name: 'Fukra Insaan', query: 'Fukra Insaan comedy' },
+  { name: 'Ashish Chanchlani', query: 'Ashish Chanchlani' },
+  { name: 'Amit Bhadana', query: 'Amit Bhadana' },
+  { name: 'Elvish Yadav', query: 'Elvish Yadav comedy' },
+  { name: 'Mythpat', query: 'Mythpat funny' },
+  { name: 'Samay Raina', query: 'Samay Raina comedy' },
+  { name: 'Tanmay Bhat', query: 'Tanmay Bhat funny' },
+  { name: 'Zakir Khan', query: 'Zakir Khan standup comedy' },
+  { name: 'Harsh Gujral', query: 'Harsh Gujral standup' },
+  { name: 'Anubhav Singh Bassi', query: 'Anubhav Singh Bassi standup' },
+  { name: 'Abhishek Upmanyu', query: 'Abhishek Upmanyu standup' },
+  { name: 'RJ Raunac', query: 'RJ Raunac comedy' }
 ];
 
 class ComedyChannelAutopilot {
