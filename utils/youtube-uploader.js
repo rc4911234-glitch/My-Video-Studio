@@ -101,7 +101,7 @@ if (require.main === module) {
     title: 'Aaryan Kelvin Savage School Life Moment 😂🔥 #shorts #comedy #viral',
     privacy: privacy
   })
-    .then(res => {
+    .then(() => {
       console.log(chalk.green('Done!'));
       process.exit(0);
     })

@@ -16,7 +16,7 @@ function resolveYtDlp() {
 const YTDLP_PATH = resolveYtDlp();
 
 class AutoViralBypasser {
-  constructor(options = {}) {
+  constructor(_options = {}) {
     this.ffmpegPath = getFFmpegPath();
     this.ytdlpPath = YTDLP_PATH;
     this.downloadsDir = path.join(__dirname, '..', 'data', 'downloads');

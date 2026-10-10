@@ -111,7 +111,9 @@ class ComedyChannelAutopilot {
   /**
    * Run Comedy Auto-Pilot Cycle
    */
-  async runCycle(forceLatestIfNone = false) {
+  async runCycle(opts = {}) {
+    const options = typeof opts === 'object' && opts !== null ? opts : { force: Boolean(opts) };
+    const forceLatestIfNone = Boolean(options.force);
     console.log(chalk.yellow.bold(`\n🎭 Comedy Channel Autopilot Cycle Starting`));
     console.log(chalk.gray('═'.repeat(60)));
     console.log(chalk.cyan(`Rule: Only videos uploaded within last ${this.maxAgeHours} hours.`));
