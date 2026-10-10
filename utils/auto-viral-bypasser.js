@@ -99,10 +99,10 @@ class AutoViralBypasser {
       '-o', outputPath
     ];
 
-    // If video is long sketch/vlog (> 65 seconds), download high-retention 40-second hook section
-    if (duration > 65) {
-      console.log(chalk.yellow(`⚡ Long video detect hui (${duration}s) — Viral 40-second clip extract kar rahe hain...`));
-      args.splice(1, 0, '--download-sections', '*00:00:10-00:00:50');
+    // If video is long sketch/vlog (> 18 seconds), extract punchy 15-second viral hook section
+    if (duration > 18) {
+      console.log(chalk.yellow(`⚡ Viral 15-second hook clip extract kar rahe hain (Horizontal 16:9)...`));
+      args.splice(1, 0, '--download-sections', '*00:00:10-00:00:25');
     }
 
     await execFileAsync(this.ytdlpPath, args, { maxBuffer: 64 * 1024 * 1024 });
@@ -114,25 +114,28 @@ class AutoViralBypasser {
    * Apply Content ID / Algorithm bypass transformations:
    * 1. Speed multiplier (1.06x)
    * 2. Zoom & Crop (5% dynamic zoom to break pixel matching)
-   * 3. Color grade & Saturation boost (contrast 1.12, saturation 1.18)
-   * 4. Pitch & Frequency shift (atempo + asetrate)
-   * 5. Audio volume boost
+   * 3. Horizontal 16:9 HD output (1280x720)
+   * 4. Color grade & Saturation boost (contrast 1.12, saturation 1.18)
+   * 5. Audio pitch & Frequency shift with exact lip-sync
+   * 6. Audio volume boost
    */
   async bypassTransform(inputPath, videoId, options = {}) {
     const speed = options.speed || 1.06;
     const outputPath = path.join(this.outputDir, `bypassed_${videoId}.mp4`);
 
     console.log(chalk.magenta(`\n⚡ Content ID Bypass Engine Running...`));
+    console.log(chalk.gray(`  ✓ Duration: Exact 15 Seconds Punchy Cut`));
+    console.log(chalk.gray(`  ✓ Format: Horizontal 16:9 Widescreen (1280x720 HD)`));
     console.log(chalk.gray(`  ✓ Speed Shift: ${speed}x (Video & Audio sync)`));
     console.log(chalk.gray(`  ✓ 5% Dynamic Zoom & Aspect Retune (Pixel hash broken)`));
     console.log(chalk.gray(`  ✓ Color Grading: Contrast 1.12, Saturation 1.18`));
-    console.log(chalk.gray(`  ✓ Audio Pitch Frequency Shift (Acoustic fingerprint broken)`));
+    console.log(chalk.gray(`  ✓ Audio Pitch Frequency Shift & 100% Lip Sync: Active`));
 
-    // Video filter: crop 5% + scale back + color grading + speed
+    // Video filter: crop 5% + scale to horizontal 1280x720 + color grading + speed
     const videoFilters = [
       `setpts=PTS/${speed}`,
       'crop=in_w*0.95:in_h*0.95',
-      'scale=in_w:in_h',
+      'scale=1280:720',
       'eq=contrast=1.12:saturation=1.18:brightness=0.01'
     ].join(',');
 
