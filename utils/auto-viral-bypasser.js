@@ -96,6 +96,7 @@ class AutoViralBypasser {
     const args = [
       videoUrl,
       '-f', 'bv*[height<=720]+ba/b[height<=720]/best',
+      '--extractor-args', 'youtube:player_client=android,web',
       '--merge-output-format', 'mp4',
       '--ffmpeg-location', this.ffmpegPath,
       '-o', outputPath

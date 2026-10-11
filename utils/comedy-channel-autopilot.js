@@ -120,7 +120,7 @@ class ComedyChannelAutopilot {
     if (fresh12hCandidates.length > 0) {
       fresh12hCandidates.sort((a, b) => b.views - a.views);
       console.log(chalk.green.bold(`\n✨ Found ${fresh12hCandidates.length} video(s) within the last 12 hours!`));
-      return { video: fresh12hCandidates[0], is12hFresh: true };
+      return { candidates: fresh12hCandidates, is12hFresh: true };
     }
 
     if (recentCandidates.length > 0) {
@@ -128,7 +128,7 @@ class ComedyChannelAutopilot {
       console.log(chalk.magenta(`[Auto-Fallback Active] Top 20 creators me se sabse trending unprocessed video chuni ja rahi hai taaki schedule miss na ho...`));
       // Sort by newest upload timestamp, then highest views
       recentCandidates.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0) || b.views - a.views);
-      return { video: recentCandidates[0], is12hFresh: false };
+      return { candidates: recentCandidates.slice(0, 10), is12hFresh: false };
     }
 
     return null;
@@ -146,44 +146,59 @@ class ComedyChannelAutopilot {
 
     const candidateResult = await this.findBestCandidateVideo();
 
-    let selected = null;
-    if (!candidateResult || !candidateResult.video) {
+    let candidatesToTry = [];
+    if (!candidateResult || !candidateResult.candidates || !candidateResult.candidates.length) {
       if (!allowFallback) {
         console.log(chalk.yellow(`\n⚠️ 12 ghante me koi naya video nahi mila. Background scanner wait karega.`));
         return null;
       }
       console.log(chalk.yellow(`\n⚠️ Pool me se koi naya video nahi mila. Emergency viral fallback search...`));
       const emergency = await this.bypasser.searchViralVideos('CarryMinati funny comedy sketch', { count: 10 });
-      selected = emergency.find(v => !this.isAlreadyProcessed(v.id)) || emergency[0];
-      if (!selected) {
-        console.error(chalk.red('Critical: Could not find any video to process.'));
-        return null;
-      }
+      candidatesToTry = emergency.filter(v => !this.isAlreadyProcessed(v.id));
     } else {
       if (!candidateResult.is12hFresh && !allowFallback) {
         console.log(chalk.yellow(`\n⚠️ Pichhle 12 ghante me naya video nahi aaya. Background scanner wait karega.`));
         return null;
       }
-      selected = candidateResult.video;
+      candidatesToTry = candidateResult.candidates;
     }
 
-    console.log(chalk.green.bold(`\n🎯 Selected Comedy Video to Bypass:`));
-    console.log(chalk.white(`  Title: ${selected.title}`));
-    console.log(chalk.white(`  Creator: ${selected.channel || selected.creatorName || 'Comedy Creator'}`));
-    console.log(chalk.white(`  Views: ${selected.views.toLocaleString()}`));
-    console.log(chalk.white(`  URL: ${selected.url}`));
+    if (!candidatesToTry.length) {
+      throw new Error('No candidate videos available to process.');
+    }
 
-    // Step 2: Download & auto-clip
-    const downloadedPath = await this.bypasser.downloadVideo(selected.url, selected.id, selected.duration);
+    let processedSuccess = null;
+    for (const selected of candidatesToTry) {
+      try {
+        console.log(chalk.green.bold(`\n🎯 Trying Comedy Video: "${selected.title}"`));
+        console.log(chalk.white(`  Creator: ${selected.channel || selected.creatorName || 'Comedy Creator'}`));
+        console.log(chalk.white(`  Views: ${selected.views.toLocaleString()}`));
+        console.log(chalk.white(`  URL: ${selected.url}`));
 
-    // Step 3: Bypass Algorithm
-    const bypassedPath = await this.bypasser.bypassTransform(downloadedPath, selected.id, { speed: 1.06 });
+        // Step 2: Download & auto-clip
+        const downloadedPath = await this.bypasser.downloadVideo(selected.url, selected.id, selected.duration);
 
-    // Step 4: Generate Viral SEO Title & Tags
-    const viralPackaging = this.generateViralPackaging(selected);
+        // Step 3: Bypass Algorithm
+        const bypassedPath = await this.bypasser.bypassTransform(downloadedPath, selected.id, { speed: 1.06 });
 
-    // Step 5: Mark processed in history
-    this.markProcessed(selected, bypassedPath);
+        // Step 4: Generate Viral SEO Title & Tags
+        const viralPackaging = this.generateViralPackaging(selected);
+
+        // Step 5: Mark processed in history
+        this.markProcessed(selected, bypassedPath);
+
+        processedSuccess = { selected, bypassedPath, viralPackaging };
+        break;
+      } catch (err) {
+        console.error(chalk.yellow(`⚠️ Could not process ${selected.id}: ${err.message}. Trying next candidate...`));
+      }
+    }
+
+    if (!processedSuccess) {
+      throw new Error('All candidate videos failed to download or transform.');
+    }
+
+    const { selected, bypassedPath, viralPackaging } = processedSuccess;
 
     console.log(chalk.gray('═'.repeat(60)));
     console.log(chalk.green.bold(`🎉 Video Ready for Comedy Channel!`));
