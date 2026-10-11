@@ -49,13 +49,15 @@ class AutoViralBypasser {
       for (const line of lines) {
         try {
           const item = JSON.parse(line);
+          const parsedTimestamp = item.timestamp || (item.upload_date ? Math.floor(new Date(`${item.upload_date.slice(0, 4)}-${item.upload_date.slice(4, 6)}-${item.upload_date.slice(6, 8)}`).getTime() / 1000) : null);
           videos.push({
             id: item.id,
             title: item.title,
             views: item.view_count || 0,
             duration: item.duration || 0,
             channel: item.uploader || item.channel || '',
-            url: item.webpage_url || `https://www.youtube.com/watch?v=${item.id}`
+            url: item.webpage_url || `https://www.youtube.com/watch?v=${item.id}`,
+            timestamp: parsedTimestamp
           });
         } catch (e) {
           // ignore parse errors for non-JSON lines
@@ -151,6 +153,7 @@ class AutoViralBypasser {
     const args = [
       '-y',
       '-i', inputPath,
+      '-t', '15',
       '-filter:v', videoFilters,
       '-filter:a', audioFilters,
       '-c:v', 'libx264',

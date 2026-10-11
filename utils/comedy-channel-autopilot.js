@@ -70,24 +70,26 @@ class ComedyChannelAutopilot {
   }
 
   /**
-   * Search for videos uploaded in the last 12 hours across creators pool
+   * Search across top 20 creators:
+   * 1. High Priority: Videos uploaded within the last 12 hours.
+   * 2. Automatic Fallback: Freshest / top-trending unprocessed comedy video from the pool.
    */
-  async findFresh12HourVideo() {
-    console.log(chalk.cyan.bold(`\n⏱️ [RULE ACTIVE] Searching ONLY for videos uploaded within last ${this.maxAgeHours} Hours...`));
+  async findBestCandidateVideo() {
+    console.log(chalk.cyan.bold(`\n⏱️ [AUTOPILOT SCAN] Scanning Top 20 Indian Comedy creators for latest content...`));
     const nowSeconds = Math.floor(Date.now() / 1000);
     const maxAgeSeconds = this.maxAgeHours * 3600;
 
-    let candidateVideos = [];
+    let fresh12hCandidates = [];
+    let recentCandidates = [];
 
     for (const creator of COMEDY_CREATORS) {
       console.log(chalk.gray(`Checking creator: ${creator.name}...`));
       try {
-        const results = await this.bypasser.searchViralVideos(`${creator.query} new`, { count: 5, shorts: false });
+        const results = await this.bypasser.searchViralVideos(`${creator.query} comedy`, { count: 5, shorts: false });
 
         for (const video of results) {
           if (this.isAlreadyProcessed(video.id)) continue;
 
-          // Check timestamp if available
           let isWithin12Hours = false;
           let ageHours = null;
 
@@ -99,22 +101,34 @@ class ComedyChannelAutopilot {
             }
           }
 
+          const candidate = { ...video, ageHours, creatorName: creator.name };
+
           if (isWithin12Hours) {
-            console.log(chalk.green.bold(`  🔥 FRESH FOUND: [${ageHours}h ago] "${video.title}" by ${creator.name}`));
-            candidateVideos.push({ ...video, ageHours, creatorName: creator.name });
+            console.log(chalk.green.bold(`  🔥 12-HOUR FRESH FOUND: [${ageHours}h ago] "${video.title}" by ${creator.name}`));
+            fresh12hCandidates.push(candidate);
+          } else {
+            recentCandidates.push(candidate);
           }
         }
       } catch (err) {
         console.log(chalk.yellow(`  Could not check ${creator.name}: ${err.message}`));
       }
 
-      if (candidateVideos.length >= 3) break; // found enough candidates
+      if (fresh12hCandidates.length >= 3) break;
     }
 
-    if (candidateVideos.length > 0) {
-      // Sort candidates by highest views
-      candidateVideos.sort((a, b) => b.views - a.views);
-      return candidateVideos[0];
+    if (fresh12hCandidates.length > 0) {
+      fresh12hCandidates.sort((a, b) => b.views - a.views);
+      console.log(chalk.green.bold(`\n✨ Found ${fresh12hCandidates.length} video(s) within the last 12 hours!`));
+      return { video: fresh12hCandidates[0], is12hFresh: true };
+    }
+
+    if (recentCandidates.length > 0) {
+      console.log(chalk.yellow(`\n⚠️ Pichhle ${this.maxAgeHours} ghante me kisi creator ka naya video nahi mila.`));
+      console.log(chalk.magenta(`[Auto-Fallback Active] Top 20 creators me se sabse trending unprocessed video chuni ja rahi hai taaki schedule miss na ho...`));
+      // Sort by newest upload timestamp, then highest views
+      recentCandidates.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0) || b.views - a.views);
+      return { video: recentCandidates[0], is12hFresh: false };
     }
 
     return null;
@@ -125,23 +139,32 @@ class ComedyChannelAutopilot {
    */
   async runCycle(opts = {}) {
     const options = typeof opts === 'object' && opts !== null ? opts : { force: Boolean(opts) };
-    const forceLatestIfNone = Boolean(options.force);
+    const allowFallback = options.force !== false;
     console.log(chalk.yellow.bold(`\n🎭 Comedy Channel Autopilot Cycle Starting`));
     console.log(chalk.gray('═'.repeat(60)));
-    console.log(chalk.cyan(`Rule: Only videos uploaded within last ${this.maxAgeHours} hours.`));
+    console.log(chalk.cyan(`Target Pool: Top 20 Indian Comedy Creators | Target Duration: 15s Horizontal 16:9`));
 
-    let selected = await this.findFresh12HourVideo();
+    const candidateResult = await this.findBestCandidateVideo();
 
-    if (!selected) {
-      console.log(chalk.yellow(`\n⚠️ Pichhle ${this.maxAgeHours} ghante me target creators ka koi naya video nahi mila.`));
-      if (!forceLatestIfNone) {
-        console.log(chalk.cyan(`Autopilot wait karega jab tak koi creator 12 ghante me naya video na daale.`));
+    let selected = null;
+    if (!candidateResult || !candidateResult.video) {
+      if (!allowFallback) {
+        console.log(chalk.yellow(`\n⚠️ 12 ghante me koi naya video nahi mila. Background scanner wait karega.`));
         return null;
-      } else {
-        console.log(chalk.magenta(`[Fallback Mode] Sabse recent trending comedy video pick kar rahe hain...`));
-        const trending = await this.bypasser.searchViralVideos('Aaryan Kelvin comedy shorts', { count: 5 });
-        selected = trending.find(v => !this.isAlreadyProcessed(v.id)) || trending[0];
       }
+      console.log(chalk.yellow(`\n⚠️ Pool me se koi naya video nahi mila. Emergency viral fallback search...`));
+      const emergency = await this.bypasser.searchViralVideos('CarryMinati funny comedy sketch', { count: 10 });
+      selected = emergency.find(v => !this.isAlreadyProcessed(v.id)) || emergency[0];
+      if (!selected) {
+        console.error(chalk.red('Critical: Could not find any video to process.'));
+        return null;
+      }
+    } else {
+      if (!candidateResult.is12hFresh && !allowFallback) {
+        console.log(chalk.yellow(`\n⚠️ Pichhle 12 ghante me naya video nahi aaya. Background scanner wait karega.`));
+        return null;
+      }
+      selected = candidateResult.video;
     }
 
     console.log(chalk.green.bold(`\n🎯 Selected Comedy Video to Bypass:`));
@@ -208,7 +231,7 @@ class ComedyChannelAutopilot {
 
 // CLI Execution
 if (require.main === module) {
-  const force = process.argv.includes('--force');
+  const force = !process.argv.includes('--strict-12h');
   const upload = process.argv.includes('--upload');
   const privacy = process.argv.includes('--private') ? 'private' : 'public';
   const autopilot = new ComedyChannelAutopilot({ maxAgeHours: 12 });
